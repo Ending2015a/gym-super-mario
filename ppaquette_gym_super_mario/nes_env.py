@@ -36,6 +36,23 @@ class NesLock:
     def get_lock(self):
         return NesLock.instance.lock
 
+KEYS_TO_ACTION_MAPPING = {
+    ():                 [0, 0, 0, 0, 0, 0],  # NOOP
+    (119,):              [1, 0, 0, 0, 0, 0],  # Up
+    (115,):              [0, 0, 1, 0, 0, 0],  # Down
+    (97,):               [0, 1, 0, 0, 0, 0],  # Left
+    (97, 112):          [0, 1, 0, 0, 1, 0],  # Left + A
+    (97, 108):          [0, 1, 0, 0, 0, 1],  # Left + B
+    (97, 108, 112):     [0, 1, 0, 0, 1, 1],  # Left + A + B
+    (100,):              [0, 0, 0, 1, 0, 0],  # Right
+    (100, 112):         [0, 0, 0, 1, 1, 0],  # Right + A
+    (100, 108):         [0, 0, 0, 1, 0, 1],  # Right + B
+    (100, 108, 112):    [0, 0, 0, 1, 1, 1],  # Right + A + B
+    (112,):              [0, 0, 0, 0, 1, 0],  # A
+    (108,):              [0, 0, 0, 0, 0, 1],  # B
+    (108, 112):         [0, 0, 0, 0, 1, 1],  # A + B
+}
+
 
 class NesEnv(gym.Env, utils.EzPickle):
     metadata = {'render.modes': ['human', 'rgb_array'], 'video.frames_per_second': 30}
@@ -86,6 +103,38 @@ class NesEnv(gym.Env, utils.EzPickle):
         # Seeding
         self.curr_seed = 0
         self._seed()
+
+    
+    def get_keys_to_action(self):
+        return KEYS_TO_ACTION_MAPPING
+
+    def render(self, mode='human', close=False):
+        self._render(mode, close)
+
+    def _render(self, mode='human', close=False):
+        if close:
+            if self.viewer is not None:
+                self.viewer.close()
+                # If we don't None out this reference pyglet becomes unhappy
+                self.viewer = None
+            return
+        if mode == 'human' and self.no_render:
+            return
+        img = self.screen.copy()  # Always rendering screen (as opposed to state)
+        if img is None:
+            img = np.zeros(shape=(self.screen_height, self.screen_width, 3), dtype=np.uint8)
+        if mode == 'rgb_array':
+            return img
+        elif mode == 'human':
+            from gym.envs.classic_control import rendering
+            if self.viewer is None:
+                self.viewer = rendering.SimpleImageViewer()
+            self.viewer.imshow(img)
+
+    def _get_reward(self):
+        # Overridable - Returns the reward for the last action
+        return self.reward
+
 
     def _configure(self, rom_path=None, lock=None):
         if rom_path is not None:
@@ -249,10 +298,6 @@ class NesEnv(gym.Env, utils.EzPickle):
         # Overridable - Starts a new episode
         return
 
-    def _get_reward(self):
-        # Overridable - Returns the reward for the last action
-        return self.reward
-
     def _get_episode_reward(self):
         # Overridable - Returns the total reward earned for the episode
         return self.episode_reward
@@ -268,7 +313,7 @@ class NesEnv(gym.Env, utils.EzPickle):
     def _get_info(self):
         # Overridable - Returns the other variables
         return self.info
-
+    
     def step(self, action):
         if 0 == self.is_initialized:
             return self._get_state(), 0, self._get_is_finished(), {}
@@ -339,6 +384,7 @@ class NesEnv(gym.Env, utils.EzPickle):
         info = self._get_info()
         return state, reward, is_finished, info
 
+    
     def reset(self):
         self._terminate_fceux()
 
@@ -357,26 +403,7 @@ class NesEnv(gym.Env, utils.EzPickle):
         self.screen = np.zeros(shape=(self.screen_height, self.screen_width, 3), dtype=np.uint8)
         return self._get_state()
 
-    def _render(self, mode='human', close=False):
-        if close:
-            if self.viewer is not None:
-                self.viewer.close()
-                # If we don't None out this reference pyglet becomes unhappy
-                self.viewer = None
-            return
-        if mode == 'human' and self.no_render:
-            return
-        img = self.screen.copy()  # Always rendering screen (as opposed to state)
-        if img is None:
-            img = np.zeros(shape=(self.screen_height, self.screen_width, 3), dtype=np.uint8)
-        if mode == 'rgb_array':
-            return img
-        elif mode == 'human':
-            from gym.envs.classic_control import rendering
-            if self.viewer is None:
-                self.viewer = rendering.SimpleImageViewer()
-            self.viewer.imshow(img)
-
+    
     def close(self):
         self.is_exiting = 1
         self._write_to_pipe('exit')

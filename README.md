@@ -4,25 +4,23 @@
 <div id="installation"></div>Installation
 ============
 
-You need to install [gym-pull](https://github.com/ppaquette/gym-pull)
 
 ```shell
-pip install gym-pull
+git clone https://github.com/Ending2015a/gym-super-mario.git
+cd gym-super-mario
+pip install .
 ```
 
  To load and run the environments, run
 
 ```python
+import ppaquette_gym_super_mario
 import gym
-import gym_pull
-gym_pull.pull('github.com/ppaquette/gym-super-mario')        # Only required once, envs will be loaded with import gym_pull afterwards
 env = gym.make('ppaquette/SuperMarioBros-1-1-v0')
 ```
 
 Environments included:
 ============
-- ppaquette/meta-SuperMarioBros-v0
-- ppaquette/meta-SuperMarioBros-Tiles-v0
 - ppaquette/SuperMarioBros-1-1-v0
 - ppaquette/SuperMarioBros-1-2-v0
 - ppaquette/SuperMarioBros-1-3-v0
